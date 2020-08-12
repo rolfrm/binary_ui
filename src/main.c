@@ -1,24 +1,10 @@
 #include<iron/full.h>
 #include<iron/gl.h>
 #include<microio.h>
-// registers
-typedef struct{
-  int w, h;
-
-}binui;
-
-typedef enum {
-  BINUI_SIZE,
-  BINUI_VIEW,
-  BINUI_COLOR,
-  BINUI_RECT,
-  BINUI_CIRCLE,
-  BINUI_ID,
-  BINUI_OFFSET
-}binui_opcodes;
-
+#include<binui.h>
 static io_reader * current_reader;
-void describe(){
+io_writer * binui_stdout;
+static void describe(){
   // todo:
   // 3 things can happen in an element
   // 1 - it describes something - pushes onto the stack
@@ -28,13 +14,13 @@ void describe(){
   static int space = 0;
   space += 1;
   binui_opcodes opcode = (binui_opcodes)io_read_u8(current_reader);
-  printf("%*s", space, "");
+  io_write_f(binui_stdout, "%*s", space, "");
   switch(opcode){
   case BINUI_SIZE:
     {
       u16 w = io_read_u16(current_reader);
       u16 h = io_read_u16(current_reader);
-      printf("Size: %i %i\n", w, h);
+      io_write_f(binui_stdout, "Size: %i %i\n", w, h);
       describe();
     }
     break;
@@ -42,16 +28,15 @@ void describe(){
     break;
   case BINUI_RECT:
     {
-      printf("Model: Rectangle\n");
+      io_write_f(binui_stdout, "Model: Rectangle\n");
     }
     break;
   case BINUI_ID:
     {
-      u64 len = io_read_u64_leb(current_reader);
-      static char name_buf[100];
-      io_read(current_reader, name_buf, len);
-      name_buf[len] = 0;
-      printf("ID: %s\n", name_buf);
+      u32 len = 0;
+      char * name_buf = io_read_strn(current_reader, &len);
+      io_write_f(binui_stdout, "ID: %.*s\n", len, name_buf);
+      free(name_buf);
       describe();
     }
   case BINUI_CIRCLE:
@@ -59,12 +44,12 @@ void describe(){
   case BINUI_COLOR:
     {
       u8 color[4];
-      printf("Color: ");
+      io_write_f(binui_stdout, "Color: ");
       for(int i = 0; i < 4; i++){
 	color[i] = io_read_u8(current_reader);
-	printf("%i ", color[i]);
+	io_write_f(binui_stdout, "%i ", color[i]);
       }
-      printf("\n");
+      io_write_f(binui_stdout, "\n");
 
       
       describe();
@@ -74,10 +59,32 @@ void describe(){
     break;
 
   }
-  space -= 1;
-  
+  space -= 1;  
 }
 
+static io_writer _binui_stdout;
+
+
+static void write_stdout(void * data, size_t count, void * userdata){
+  UNUSED(userdata);
+  fwrite(data, count, 1, stdout);
+}
+
+void binui_describe(io_reader * reader){
+  if(binui_stdout == NULL){
+    binui_stdout = &_binui_stdout;
+    binui_stdout->f =  write_stdout;
+  }
+  
+  io_reader * prev_reader = current_reader;
+  current_reader = reader;
+  describe();
+  current_reader = prev_reader;
+}
+
+void binui_iterate(io_reader * reader, void (* callback)(binui * registers, void * userdata), void * userdata){
+
+}
 
 int main(int argc, char ** argv){
   io_writer _wd = {0};
@@ -94,14 +101,12 @@ int main(int argc, char ** argv){
   io_write_u8(wd, 255);
   io_write_u8(wd, BINUI_ID);
   const char * grpname = "hello world";
-  io_write_u64_leb(wd, strlen(grpname));
-  io_write(wd, grpname, strlen(grpname));
+  io_write_strn(wd, grpname);
   
   io_write_u8(wd, BINUI_RECT);
 
-  wd->offset = 0;
-  current_reader = wd;
-  describe();
+  io_reset(wd);
+  binui_describe(wd);
   
   gl_window * w = gl_window_open(512, 512);
   gl_window_make_current(w);

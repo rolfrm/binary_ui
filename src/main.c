@@ -1,7 +1,33 @@
-#include<iron/full.h>
-#include<iron/gl.h>
+//#include<iron/full.h>
+//#include<iron/gl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <assert.h>
+
 #include<microio.h>
+typedef int8_t i8;
+
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef float f32;
+typedef double f64;
+
 #include<binui.h>
+#define UNUSED(x) (void)(x)
+
+
+
 static io_reader * current_reader;
 io_writer * binui_stdout;
 static void describe(){
@@ -107,13 +133,13 @@ int main(int argc, char ** argv){
 
   io_reset(wd);
   binui_describe(wd);
-  
+  /*
   gl_window * w = gl_window_open(512, 512);
   gl_window_make_current(w);
   while(true){
     gl_window_poll_events();
     gl_window_swap(w);
-  }
+    }*/
   
   return 0;
 }

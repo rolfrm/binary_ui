@@ -2,7 +2,7 @@ OPT = -g3 -O0
 LIB_SOURCES1 = main.c 
 LIB_SOURCES = $(addprefix src/, $(LIB_SOURCES1)) libmicroio/src/microio.c
 CC = gcc
-TARGET = run.exe
+TARGET = run
 LIB_OBJECTS =$(LIB_SOURCES:.c=.o)
 LDFLAGS= -L. $(OPT) # -Wl,--gc-sections -Wl,-s -fdata-sections -ffunction-sections
 LIBS= 
